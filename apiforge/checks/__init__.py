@@ -6,10 +6,12 @@ from apiforge.checks.bfla import BFLACheck
 from apiforge.checks.bola_numeric import BolaNumericCheck
 from apiforge.checks.data_exposure import SensitiveDataExposureCheck
 from apiforge.checks.mass_assignment import MassAssignmentCheck
+from apiforge.checks.jwt_alg_none import JWTAlgNoneCheck
 
 ALL_CHECKS = [
     BolaNumericCheck(),
     BFLACheck(),
     MassAssignmentCheck(),
     SensitiveDataExposureCheck(),
+    JWTAlgNoneCheck(),
 ]
