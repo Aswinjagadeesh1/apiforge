@@ -1,0 +1,12 @@
+{
+  "login_endpoint": "/identity/api/auth/login",
+  "token_json_path": "token",
+  "user_a": {
+    "email": "usera@test.com",
+    "password": "Password123!"
+  },
+  "user_b": {
+    "email": "userb@test.com",
+    "password": "Password123!"
+  }
+}

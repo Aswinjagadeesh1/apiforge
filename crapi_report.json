@@ -1,0 +1,44 @@
+[
+  {
+    "check_id": "API5_BFLA_ADMIN",
+    "title": "BFLA \u2014 Admin Function Reachable by Regular User",
+    "severity": "HIGH",
+    "owasp_category": "API5:2023 Broken Function Level Authorization",
+    "cwe": "CWE-285",
+    "cvss_score": 7.5,
+    "method": "GET",
+    "endpoint": "/identity/api/v2/user/dashboard",
+    "description": "A regular (non-admin) user reached the privileged endpoint '/identity/api/v2/user/dashboard' and received HTTP 200. Function-level authorization appears to be missing or not enforced for this administrative function.",
+    "poc_request": "GET /identity/api/v2/user/dashboard\nAuthorization: Bearer <REGULAR_USER_TOKEN>",
+    "poc_response": "HTTP 200\n{\"id\":8,\"name\":\"UserA\",\"email\":\"usera@test.com\",\"number\":\"9797877689\",\"picture_url\":null,\"video_url\":null,\"video_name\":null,\"available_credit\":175.0,\"video_id\":0,\"role\":\"ROLE_USER\"}",
+    "remediation": "Enforce role-based access control on every administrative and privileged endpoint. Deny by default; require an explicit authorization check that the caller holds the necessary role before executing privileged functionality."
+  },
+  {
+    "check_id": "API5_BFLA_ADMIN",
+    "title": "BFLA \u2014 Admin Function Reachable by Regular User",
+    "severity": "HIGH",
+    "owasp_category": "API5:2023 Broken Function Level Authorization",
+    "cwe": "CWE-285",
+    "cvss_score": 7.5,
+    "method": "GET",
+    "endpoint": "/identity/api/v2/user/dashboard",
+    "description": "A regular (non-admin) user reached the privileged endpoint '/identity/api/v2/user/dashboard' and received HTTP 200. Function-level authorization appears to be missing or not enforced for this administrative function.",
+    "poc_request": "GET /identity/api/v2/user/dashboard\nAuthorization: Bearer <REGULAR_USER_TOKEN>",
+    "poc_response": "HTTP 200\n{\"id\":8,\"name\":\"UserA\",\"email\":\"usera@test.com\",\"number\":\"9797877689\",\"picture_url\":null,\"video_url\":null,\"video_name\":null,\"available_credit\":175.0,\"video_id\":0,\"role\":\"ROLE_USER\"}",
+    "remediation": "Enforce role-based access control on every administrative and privileged endpoint. Deny by default; require an explicit authorization check that the caller holds the necessary role before executing privileged functionality."
+  },
+  {
+    "check_id": "API5_BFLA_ADMIN",
+    "title": "BFLA \u2014 Admin Function Reachable by Regular User",
+    "severity": "HIGH",
+    "owasp_category": "API5:2023 Broken Function Level Authorization",
+    "cwe": "CWE-285",
+    "cvss_score": 7.5,
+    "method": "GET",
+    "endpoint": "/workshop/api/management/users/all",
+    "description": "A regular (non-admin) user reached the privileged endpoint '/workshop/api/management/users/all' and received HTTP 200. Function-level authorization appears to be missing or not enforced for this administrative function.",
+    "poc_request": "GET /workshop/api/management/users/all\nAuthorization: Bearer <REGULAR_USER_TOKEN>",
+    "poc_response": "HTTP 200\n{\"users\":[{\"user\":{\"email\":\"adam007@example.com\",\"number\":\"9876895423\"},\"available_credit\":100.0},{\"user\":{\"email\":\"pogba006@example.com\",\"number\":\"9876570006\"},\"available_credit\":100.0},{\"user\":{\"email\":\"robot001@example.com\",\"number\":\"9876570001\"},\"available_credit\":100.0},{\"user\":{\"email\":\"test@example.com\",\"number\":\"9876540001\"},\"available_credit\":100.0},{\"user\":{\"email\":\"admin@example.com\",\"n \u2026[truncated]",
+    "remediation": "Enforce role-based access control on every administrative and privileged endpoint. Deny by default; require an explicit authorization check that the caller holds the necessary role before executing privileged functionality."
+  }
+]
