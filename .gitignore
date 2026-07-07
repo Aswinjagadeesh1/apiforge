@@ -10,3 +10,5 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+crapi_report.json
+*.xlsx
