@@ -8,6 +8,7 @@ from apiforge.checks.data_exposure import SensitiveDataExposureCheck
 from apiforge.checks.mass_assignment import MassAssignmentCheck
 from apiforge.checks.jwt_alg_none import JWTAlgNoneCheck
 from apiforge.checks.jwt_weak_secret import JWTWeakSecretCheck
+from apiforge.checks.rate_limiting import RateLimitingCheck
 
 ALL_CHECKS = [
     BolaNumericCheck(),
@@ -16,4 +17,5 @@ ALL_CHECKS = [
     SensitiveDataExposureCheck(),
     JWTAlgNoneCheck(),
     JWTWeakSecretCheck(),
+    RateLimitingCheck(),
 ]
