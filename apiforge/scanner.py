@@ -59,8 +59,17 @@ class Scanner:
             if on_progress:
                 on_progress(i, total)
 
+# Deduplicate findings by (check_id, method, endpoint).
+        seen = set()
+        unique = []
+        for f in result.findings:
+            key = (f.check_id, f.method, f.endpoint)
+            if key not in seen:
+                seen.add(key)
+                unique.append(f)
+        result.findings = unique
+
         result.endpoints_scanned = len(endpoints)
         return result
-
     async def close(self) -> None:
         await self.executor.close()
