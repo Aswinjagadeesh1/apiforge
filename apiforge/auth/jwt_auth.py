@@ -1,8 +1,10 @@
 """JWT / bearer-token authenticator.
 
-Logs a user in against a configurable login endpoint and extracts the bearer
-token. Supports different login field names (email, username) and flexible
-token locations via a dotted json_path.
+Supports:
+  - custom identity field (email, username, user) via login_field
+  - custom password field name (password, pass) via password_field
+  - flexible token extraction via token_json_path
+The token is returned; the executor decides which header to send it in.
 """
 from __future__ import annotations
 
@@ -52,24 +54,23 @@ class JWTAuthenticator:
         login_endpoint: str,
         token_json_path: Optional[str] = None,
         login_field: str = "email",
+        password_field: str = "password",
         timeout: float = 15.0,
     ) -> None:
         self.base_url = base_url.rstrip("/")
         self.login_endpoint = login_endpoint
         self.token_json_path = token_json_path
         self.login_field = login_field
+        self.password_field = password_field
         self.client = httpx.AsyncClient(timeout=timeout)
 
     async def login(self, label: str, password: str, **identity) -> UserSession:
-        """identity holds the login identifier: either email=... or username=..."""
-        # Figure out the identifier value and label email for the session.
         ident_value = identity.get(self.login_field)
         if ident_value is None:
-            # fall back to whatever identity field was provided
             ident_value = next(iter(identity.values()), "")
 
         url = f"{self.base_url}{self.login_endpoint}"
-        payload = {self.login_field: ident_value, "password": password}
+        payload = {self.login_field: ident_value, self.password_field: password}
         try:
             resp = await self.client.post(url, json=payload)
         except httpx.HTTPError as exc:

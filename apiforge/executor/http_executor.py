@@ -1,7 +1,8 @@
 """Async HTTP executor.
 
-A thin wrapper around httpx that all checks share, so token injection, timeouts,
-and error handling live in one place.
+Wraps httpx so token injection, timeouts, and error handling live in one place.
+Supports a custom auth header (default: Authorization: Bearer <token>), so APIs
+using non-standard headers like x-access-token also work.
 """
 from __future__ import annotations
 
@@ -11,9 +12,21 @@ import httpx
 
 
 class HttpExecutor:
-    def __init__(self, base_url: str, timeout: float = 15.0) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        auth_header: str = "Authorization",
+        auth_scheme: str = "Bearer",
+        timeout: float = 15.0,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
+        self.auth_header = auth_header
+        self.auth_scheme = auth_scheme
         self.client = httpx.AsyncClient(timeout=timeout)
+
+    def _auth_value(self, token: str) -> str:
+        # If a scheme is set (e.g. "Bearer"), prefix it; otherwise send raw token.
+        return f"{self.auth_scheme} {token}" if self.auth_scheme else token
 
     async def send(
         self,
@@ -27,7 +40,7 @@ class HttpExecutor:
         url = path if path.startswith("http") else f"{self.base_url}{path}"
         h: dict[str, str] = dict(headers or {})
         if token:
-            h["Authorization"] = f"Bearer {token}"
+            h[self.auth_header] = self._auth_value(token)
 
         try:
             return await self.client.request(
@@ -38,7 +51,7 @@ class HttpExecutor:
                 json=body if body is not None else None,
             )
         except httpx.HTTPError:
-            return None  # network errors → treat as "no response"
+            return None
 
     async def close(self) -> None:
         await self.client.aclose()

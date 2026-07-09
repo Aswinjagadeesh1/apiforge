@@ -15,6 +15,8 @@ from rich.table import Table
 from apiforge.auth.jwt_auth import JWTAuthenticator
 from apiforge.models import UserSession
 from apiforge.parser.postman import PostmanParser
+from apiforge.parser.openapi import OpenAPIParser
+from apiforge.parser.openapi import OpenAPIParser
 from apiforge.reporter.report import Reporter
 from apiforge.scanner import Scanner
 
@@ -71,7 +73,13 @@ async def _run(
         "host": base_url,
         "url_mail": "http://localhost:8025",
     }
-    parser = PostmanParser(collection, environment_path=environment, extra_vars=base_vars)
+    import json as _json
+    with open(collection, encoding="utf-8") as _f:
+        _peek = _json.load(_f)
+    if "swagger" in _peek or "openapi" in _peek:
+        parser = OpenAPIParser(collection, extra_vars=base_vars)
+    else:
+        parser = PostmanParser(collection, environment_path=environment, extra_vars=base_vars)
     endpoints = parser.parse()
     console.print(f"[green]✓[/green] Parsed [bold]{len(endpoints)}[/bold] endpoints")
 
@@ -81,6 +89,7 @@ async def _run(
         login_endpoint=cfg["login_endpoint"],
         token_json_path=cfg.get("token_json_path"),
         login_field=cfg.get("login_field", "email"),
+        password_field=cfg.get("password_field", "password"), 
     )
     sessions: dict[str, UserSession] = {}
     try:
@@ -99,7 +108,11 @@ async def _run(
         await auth.close()
 
     # ---- scan ----
-    scanner = Scanner(base_url=base_url)
+    scanner = Scanner(
+        base_url=base_url,
+        auth_header=cfg.get("auth_header", "Authorization"),
+        auth_scheme=cfg.get("auth_scheme", "Bearer"),
+    )
     with Progress(
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),

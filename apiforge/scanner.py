@@ -1,4 +1,4 @@
-"""Scanner orchestrator — the engine that ties parser, auth, checks together."""
+"""Scanner orchestrator — ties parser, auth, checks together."""
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -23,8 +23,12 @@ class Scanner:
         self,
         base_url: str,
         checks: Optional[list[BaseCheck]] = None,
+        auth_header: str = "Authorization",
+        auth_scheme: str = "Bearer",
     ) -> None:
-        self.executor = HttpExecutor(base_url)
+        self.executor = HttpExecutor(
+            base_url, auth_header=auth_header, auth_scheme=auth_scheme
+        )
         self.checks = checks if checks is not None else ALL_CHECKS
 
     async def scan(
@@ -35,14 +39,13 @@ class Scanner:
     ) -> ScanResult:
         result = ScanResult()
 
-        # Pre-compute the applicable (endpoint, check) work items.
         work: list[tuple[Endpoint, BaseCheck]] = []
         for ep in endpoints:
             for check in self.checks:
                 try:
                     if check.is_applicable(ep):
                         work.append((ep, check))
-                except Exception as exc:  # a bad check shouldn't kill the scan
+                except Exception as exc:
                     result.errors.append(
                         f"{check.check_id} applicability on {ep.path}: {exc}"
                     )
@@ -59,7 +62,7 @@ class Scanner:
             if on_progress:
                 on_progress(i, total)
 
-# Deduplicate findings by (check_id, method, endpoint).
+        # Deduplicate findings by (check_id, method, endpoint).
         seen = set()
         unique = []
         for f in result.findings:
@@ -71,5 +74,6 @@ class Scanner:
 
         result.endpoints_scanned = len(endpoints)
         return result
+
     async def close(self) -> None:
         await self.executor.close()

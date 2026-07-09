@@ -1,0 +1,10 @@
+{
+  "login_endpoint": "/api/login",
+  "token_json_path": "token",
+  "login_field": "user",
+  "password_field": "pass",
+  "auth_header": "x-access-token",
+  "auth_scheme": "",
+  "user_a": { "user": "test1@test.com", "password": "Password1!" },
+  "user_b": { "user": "test2@test.com", "password": "Password1!" }
+}
