@@ -80,12 +80,16 @@ async def _run(
         base_url=base_url,
         login_endpoint=cfg["login_endpoint"],
         token_json_path=cfg.get("token_json_path"),
+        login_field=cfg.get("login_field", "email"),
     )
     sessions: dict[str, UserSession] = {}
     try:
         for label in ("user_a", "user_b"):
             u = cfg[label]
-            sessions[label] = await auth.login(label, u["email"], u["password"])
+            login_field = cfg.get("login_field", "email")
+            sessions[label] = await auth.login(
+                label, password=u["password"], **{login_field: u[login_field]}
+            )
         console.print("[green]✓[/green] Authenticated user_a and user_b")
     except Exception as exc:
         console.print(f"[red]✗ Authentication failed:[/red] {exc}")

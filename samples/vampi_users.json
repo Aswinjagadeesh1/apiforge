@@ -1,0 +1,7 @@
+{
+  "login_endpoint": "/users/v1/login",
+  "token_json_path": "auth_token",
+  "login_field": "username",
+  "user_a": { "username": "name1", "password": "pass1" },
+  "user_b": { "username": "name2", "password": "pass2" }
+}
