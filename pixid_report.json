@@ -1,0 +1,44 @@
+[
+  {
+    "check_id": "API4_NO_RATE_LIMIT",
+    "title": "Unrestricted Resource Consumption \u2014 Missing Rate Limiting",
+    "severity": "MEDIUM",
+    "owasp_category": "API4:2023 Unrestricted Resource Consumption",
+    "cwe": "CWE-307",
+    "cvss_score": 5.3,
+    "method": "POST",
+    "endpoint": "/api/login",
+    "description": "The sensitive endpoint '/api/login' accepted 15 rapid requests without any rate limiting (no HTTP 429 responses). This enables brute-force attacks on credentials/OTPs and resource-exhaustion abuse.",
+    "poc_request": "POST /api/login  x15 rapid requests\nObserved status codes: [400]",
+    "poc_response": "No 429 (Too Many Requests) returned across 15 requests.",
+    "remediation": "Implement rate limiting on authentication and other sensitive endpoints (per-IP and per-account quotas, backoff, CAPTCHA after repeated failures). Return HTTP 429 when limits are exceeded."
+  },
+  {
+    "check_id": "API4_NO_RATE_LIMIT",
+    "title": "Unrestricted Resource Consumption \u2014 Missing Rate Limiting",
+    "severity": "MEDIUM",
+    "owasp_category": "API4:2023 Unrestricted Resource Consumption",
+    "cwe": "CWE-307",
+    "cvss_score": 5.3,
+    "method": "POST",
+    "endpoint": "/api/register",
+    "description": "The sensitive endpoint '/api/register' accepted 15 rapid requests without any rate limiting (no HTTP 429 responses). This enables brute-force attacks on credentials/OTPs and resource-exhaustion abuse.",
+    "poc_request": "POST /api/register  x15 rapid requests\nObserved status codes: [400]",
+    "poc_response": "No 429 (Too Many Requests) returned across 15 requests.",
+    "remediation": "Implement rate limiting on authentication and other sensitive endpoints (per-IP and per-account quotas, backoff, CAPTCHA after repeated failures). Return HTTP 429 when limits are exceeded."
+  },
+  {
+    "check_id": "API3_DATA_EXPOSURE",
+    "title": "Sensitive Data Exposure in Response",
+    "severity": "MEDIUM",
+    "owasp_category": "API3:2023 Broken Object Property Level Authorization",
+    "cwe": "CWE-200",
+    "cvss_score": 5.3,
+    "method": "GET",
+    "endpoint": "/api/user/info",
+    "description": "The response from '/api/user/info' contains sensitive field name(s): password. Exposing these in API responses risks credential and PII leakage.",
+    "poc_request": "GET /api/user/info\nAuthorization: Bearer <USER_TOKEN>",
+    "poc_response": "HTTP 200\n[{\"_id\":44,\"email\":\"test1@test.com\",\"password\":\"Password1!\",\"name\":\"thenscreen\",\"pic\":\"https://s3.amazonaws.com/uifaces/faces/twitter/j04ntoh/128.jpg\",\"account_balance\":50,\"is_admin\":false,\"all_pictures\":[]}]",
+    "remediation": "Return only the fields the client needs. Filter sensitive attributes (password hashes, secrets, tokens, national IDs, card data) out of API responses using explicit output schemas / serializers rather than returning full objects."
+  }
+]
