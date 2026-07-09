@@ -14,6 +14,20 @@
     "remediation": "Return only the fields the client needs. Filter sensitive attributes (password hashes, secrets, tokens, national IDs, card data) out of API responses using explicit output schemas / serializers rather than returning full objects."
   },
   {
+    "check_id": "API1_BOLA_DYNAMIC",
+    "title": "BOLA via Dynamic ID Discovery",
+    "severity": "HIGH",
+    "owasp_category": "API1:2023 Broken Object Level Authorization",
+    "cwe": "CWE-639",
+    "cvss_score": 7.5,
+    "method": "GET",
+    "endpoint": "/books/v1/bookTitle18",
+    "description": "User B accessed object 'bookTitle18' owned by User A at '/books/v1/bookTitle18'. The identifier was discovered dynamically from User A's list at '/books/v1' (owner field 'user'). The server returned identical data to a non-owner, confirming missing object-level authorization.",
+    "poc_request": "GET /books/v1/bookTitle18\nAuthorization: <USER_B_TOKEN>\n(object 'bookTitle18' belongs to User A)",
+    "poc_response": "HTTP 200\n{\"book_title\": \"bookTitle18\", \"owner\": \"name1\", \"secret\": \"secret for bookTitle18\"}",
+    "remediation": "Enforce object-level authorization: verify the authenticated user owns or may access the requested object before returning it. Unguessable identifiers are not a substitute for an ownership check."
+  },
+  {
     "check_id": "API4_NO_RATE_LIMIT",
     "title": "Unrestricted Resource Consumption \u2014 Missing Rate Limiting",
     "severity": "MEDIUM",

@@ -9,6 +9,7 @@ from apiforge.checks.mass_assignment import MassAssignmentCheck
 from apiforge.checks.jwt_alg_none import JWTAlgNoneCheck
 from apiforge.checks.jwt_weak_secret import JWTWeakSecretCheck
 from apiforge.checks.rate_limiting import RateLimitingCheck
+from apiforge.checks.bola_dynamic import BolaDynamicCheck
 
 ALL_CHECKS = [
     BolaNumericCheck(),
@@ -18,4 +19,5 @@ ALL_CHECKS = [
     JWTAlgNoneCheck(),
     JWTWeakSecretCheck(),
     RateLimitingCheck(),
+    BolaDynamicCheck(),
 ]

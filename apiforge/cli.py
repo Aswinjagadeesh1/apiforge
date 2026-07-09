@@ -108,6 +108,11 @@ async def _run(
         await auth.close()
 
     # ---- scan ----
+    # Configure dynamic BOLA check from config (config over code).
+    from apiforge.checks.bola_dynamic import BolaDynamicCheck
+    BolaDynamicCheck.id_fields = cfg.get("bola_id_fields", BolaDynamicCheck.id_fields)
+    BolaDynamicCheck.owner_field = cfg.get("bola_owner_field", BolaDynamicCheck.owner_field)
+
     scanner = Scanner(
         base_url=base_url,
         auth_header=cfg.get("auth_header", "Authorization"),
