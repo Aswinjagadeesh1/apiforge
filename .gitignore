@@ -12,3 +12,6 @@ venv/
 .ruff_cache/
 crapi_report.json
 *.xlsx
+*_report.json
+*_report.xlsx
+*.xlsx
