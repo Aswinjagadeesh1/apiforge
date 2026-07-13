@@ -10,6 +10,7 @@ from apiforge.checks.jwt_alg_none import JWTAlgNoneCheck
 from apiforge.checks.jwt_weak_secret import JWTWeakSecretCheck
 from apiforge.checks.rate_limiting import RateLimitingCheck
 from apiforge.checks.bola_dynamic import BolaDynamicCheck
+from apiforge.checks.privilege_escalation import PrivilegeEscalationCheck
 
 ALL_CHECKS = [
     BolaNumericCheck(),
@@ -20,4 +21,5 @@ ALL_CHECKS = [
     JWTWeakSecretCheck(),
     RateLimitingCheck(),
     BolaDynamicCheck(),
+    PrivilegeEscalationCheck(),
 ]

@@ -93,13 +93,22 @@ async def _run(
     )
     sessions: dict[str, UserSession] = {}
     try:
-        for label in ("user_a", "user_b"):
+        # Build the list of users to log in. Admin is optional (opt-in for
+        # role-aware privilege-escalation testing).
+        user_labels = ["user_a", "user_b"]
+        if "user_admin" in cfg:
+            user_labels.append("user_admin")
+        for label in user_labels:
             u = cfg[label]
             login_field = cfg.get("login_field", "email")
             sessions[label] = await auth.login(
                 label, password=u["password"], **{login_field: u[login_field]}
             )
-        console.print("[green]✓[/green] Authenticated user_a and user_b")
+        # Map the admin config label to the "admin" key the privilege-
+        # escalation check looks for.
+        if "user_admin" in sessions:
+            sessions["admin"] = sessions["user_admin"]
+        console.print("[green]✓[/green] Authenticated users")
     except Exception as exc:
         console.print(f"[red]✗ Authentication failed:[/red] {exc}")
         await auth.close()
