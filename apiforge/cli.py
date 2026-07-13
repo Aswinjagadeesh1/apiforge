@@ -40,6 +40,7 @@ def scan(
     environment: Optional[Path] = typer.Option(None, "--env", "-e", help="Postman environment JSON."),
     output: Path = typer.Option("apiforge_report.xlsx", "--output", "-o", help="Excel report path."),
     json_output: Optional[Path] = typer.Option(None, "--json", help="Optional JSON report path."),
+    word_output: Optional[Path] = typer.Option(None, "--word", help="Optional Word (.docx) report path."),
 ) -> None:
     """Scan an API described by a Postman collection for OWASP API Top 10 issues."""
     console.print(
@@ -49,7 +50,7 @@ def scan(
             border_style="cyan",
         )
     )
-    asyncio.run(_run(collection, users, base_url, environment, output, json_output))
+    asyncio.run(_run(collection, users, base_url, environment, output, json_output, word_output))
 
 
 async def _run(
@@ -59,6 +60,7 @@ async def _run(
     environment: Optional[Path],
     output: Path,
     json_output: Optional[Path],
+    word_output: Optional[Path] = None,
 ) -> None:
     # ---- config ----
     with open(users, encoding="utf-8") as f:
@@ -153,6 +155,10 @@ async def _run(
     if json_output:
         reporter.to_json(result.findings, json_output)
         console.print(f"[green]✓[/green] JSON report → [bold]{json_output}[/bold]")
+    if word_output:
+        from apiforge.reporter.report import write_word_report
+        write_word_report(result.findings, word_output, target=base_url)
+        console.print(f"[green]✓[/green] Word report → [bold]{word_output}[/bold]")
 
 
 def _print_findings(findings: list) -> None:
