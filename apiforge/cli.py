@@ -148,7 +148,7 @@ async def _run(
 
     # ---- write files ----
     reporter = Reporter()
-    reporter.to_excel(result.findings, output)
+    reporter.to_excel(result.findings, output, target=base_url)
     console.print(f"[green]✓[/green] Excel report → [bold]{output}[/bold]")
     if json_output:
         reporter.to_json(result.findings, json_output)
