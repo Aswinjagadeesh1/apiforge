@@ -10,7 +10,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from apiforge.executor.http_executor import HttpExecutor
+from apiforge.executor.http_executor import HttpExecutor, raw_request, raw_response
 from apiforge.models import Endpoint, Finding, Severity, UserSession
 
 
@@ -43,7 +43,16 @@ class BaseCheck(ABC):
         poc_request: str,
         poc_response: str,
         remediation: str,
+        attack_response=None,
     ) -> Finding:
+        # If the check hands us the real httpx response of the attack request,
+        # build a reproducible PoC from the ACTUAL request/response sent.
+        if attack_response is not None:
+            try:
+                poc_request = raw_request(attack_response)
+                poc_response = raw_response(attack_response)
+            except Exception:
+                pass  # fall back to the provided strings
         return Finding(
             check_id=self.check_id,
             title=self.name,

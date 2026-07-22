@@ -95,41 +95,12 @@ class JWTAlgNoneCheck(BaseCheck):
         if attack.status_code == 200:
             return self._finding(
                 endpoint=endpoint,
+                attack_response=attack,
                 description=(
                     f"The endpoint '{endpoint.path}' rejected an invalid token but "
                     f"accepted a JWT with algorithm set to 'none' and no signature. "
                     f"The server does not verify token signatures, allowing an "
                     f"attacker to forge tokens and impersonate any user."
-                ),
-                poc_request=(
-                    f"{endpoint.method} {endpoint.path}\n"
-                    f"Authorization: Bearer <forged-token-with-alg-none>"
-                ),
-                poc_response=f"HTTP {attack.status_code}\n{self._truncate(attack.text)}",
-                remediation=(
-                    "Reject tokens using the 'none' algorithm. Explicitly configure "
-                    "the JWT library to only accept the expected signing algorithm "
-                    "(e.g. RS256 or HS256) and always verify the signature."
-                ),
-            )
-        return None
-        # Attack: send the forged alg:none token.
-        attack = await executor.send(
-            method=endpoint.method, path=endpoint.path,
-            token=forged, headers=endpoint.headers, query=endpoint.query,
-        )
-        if attack is None:
-            return None
-
-        # Vuln signal: forged token still gets 200.
-        if attack.status_code == 200:
-            return self._finding(
-                endpoint=endpoint,
-                description=(
-                    f"The endpoint '{endpoint.path}' accepted a JWT with the "
-                    f"algorithm set to 'none' and no signature. The server does "
-                    f"not verify token signatures, allowing an attacker to forge "
-                    f"tokens and impersonate any user."
                 ),
                 poc_request=(
                     f"{endpoint.method} {endpoint.path}\n"

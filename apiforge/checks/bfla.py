@@ -61,6 +61,7 @@ class BFLACheck(BaseCheck):
         if resp.status_code in (200, 201):
             return self._finding(
                 endpoint=endpoint,
+                attack_response=resp,
                 description=(
                     f"A regular (non-admin) user reached the privileged endpoint "
                     f"'{endpoint.path}' and received HTTP {resp.status_code}. "

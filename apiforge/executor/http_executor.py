@@ -55,3 +55,46 @@ class HttpExecutor:
 
     async def close(self) -> None:
         await self.client.aclose()
+
+
+# --- PoC capture helpers: format the REAL request/response actually sent ---
+def raw_request(response) -> str:
+    """Format the actual httpx request that produced `response` as a raw HTTP
+    request string — real method, path, headers (incl. the real auth token
+    sent) and body. Used to build reproducible PoCs."""
+    r = getattr(response, "request", None)
+    if r is None:
+        return ""
+    url = r.url
+    path = url.raw_path.decode() if isinstance(url.raw_path, (bytes, bytearray)) else str(url.raw_path)
+    host = url.netloc.decode() if isinstance(url.netloc, (bytes, bytearray)) else (url.host or "")
+    lines = [f"{r.method} {path} HTTP/1.1", f"Host: {host}"]
+    for k, v in r.headers.items():
+        if k.lower() == "host":
+            continue
+        lines.append(f"{k}: {v}")
+    out = "\n".join(lines)
+    body = r.content or b""
+    try:
+        body_s = body.decode("utf-8", "replace")
+    except Exception:
+        body_s = ""
+    if body_s.strip():
+        out += "\n\n" + body_s
+    return out
+
+
+def raw_response(response, limit: int = 800) -> str:
+    """Format the actual server response (status, key headers, truncated body)."""
+    reason = getattr(response, "reason_phrase", "") or ""
+    lines = [f"HTTP {response.status_code} {reason}".rstrip()]
+    for k in ("content-type", "content-length", "server"):
+        if k in response.headers:
+            lines.append(f"{k.title()}: {response.headers[k]}")
+    body = response.text or ""
+    if len(body) > limit:
+        body = body[:limit] + " …[truncated]"
+    out = "\n".join(lines)
+    if body.strip():
+        out += "\n\n" + body
+    return out

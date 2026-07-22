@@ -72,6 +72,7 @@ class BolaNumericCheck(BaseCheck):
         if resp_b.status_code == 200 and resp_b.text.strip() == resp_a.text.strip():
             return self._finding(
                 endpoint=endpoint,
+                attack_response=resp_b,
                 description=(
                     f"User B successfully retrieved User A's resource at "
                     f"'{endpoint.path}'. The server returned an identical response "

@@ -73,6 +73,7 @@ class MassAssignmentCheck(BaseCheck):
         if reflected:
             return self._finding(
                 endpoint=endpoint,
+                attack_response=resp,
                 description=(
                     f"The endpoint '{endpoint.path}' accepted unexpected "
                     f"privilege-related fields ({', '.join(reflected)}) in the "

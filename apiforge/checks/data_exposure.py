@@ -82,6 +82,7 @@ class SensitiveDataExposureCheck(BaseCheck):
         if found:
             return self._finding(
                 endpoint=endpoint,
+                attack_response=resp,
                 description=(
                     f"The response from '{endpoint.path}' contains sensitive field "
                     f"name(s): {', '.join(sorted(set(found)))}. Exposing these in "

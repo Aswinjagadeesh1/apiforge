@@ -156,7 +156,7 @@ async def _run(
         reporter.to_json(result.findings, json_output)
         console.print(f"[green]✓[/green] JSON report → [bold]{json_output}[/bold]")
     if word_output:
-        from apiforge.reporter.report import write_word_report
+        from apiforge.reporter.report_word import write_word_report
         write_word_report(result.findings, word_output, target=base_url)
         console.print(f"[green]✓[/green] Word report → [bold]{word_output}[/bold]")
 

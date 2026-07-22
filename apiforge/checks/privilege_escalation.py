@@ -110,6 +110,7 @@ class PrivilegeEscalationCheck(BaseCheck):
         if 200 <= reg_resp.status_code < 300 and not looks_empty:
             return self._finding(
                 endpoint=endpoint,
+                attack_response=reg_resp,
                 description=(
                     f"A regular (non-admin) user successfully performed "
                     f"{endpoint.method} {endpoint.path}, which the admin account "

@@ -2,7 +2,7 @@
 
 **Automated OWASP API Top 10 vulnerability detection from Postman collections and OpenAPI/Swagger specs.**
 
-APIForge takes an API description (a Postman collection *or* an OpenAPI/Swagger file) plus test-user credentials, authenticates the users, runs a suite of OWASP API Top 10 security checks across every endpoint, and produces a pentest-ready Excel report — turning hours of manual API testing into a single command.
+APIForge takes an API description (a Postman collection *or* an OpenAPI/Swagger file) plus test-user credentials, authenticates the users, runs a suite of OWASP API Top 10 security checks across every endpoint, and produces pentest-ready Excel and Word reports (with annotated request/response PoC evidence) — turning hours of manual API testing into a single command.
 
 Fully local. No cloud. No telemetry. Open source (Apache 2.0).
 
@@ -13,8 +13,8 @@ Fully local. No cloud. No telemetry. Open source (Apache 2.0).
 - **9 checks across 5 OWASP API categories** (API1-API5).
 - **Role-aware privilege escalation** — admin baseline + path heuristics + content verification to keep findings trustworthy.
 - **Configurable, not hardcoded** — login field, password field, auth header/scheme, BOLA identifier/owner fields, and optional admin role are all set via config, so new APIs need config changes, not code changes.
-- **Pentest-shaped output** — Excel report with severity, CVSS, CWE, OWASP category, PoC request/response, and remediation.
-- **Low false positives** — every check verifies a baseline (and, where relevant, response content) before reporting.
+- **Pentest-shaped output** — Excel and Word reports with severity, CVSS, CWE, OWASP category, annotated request/response PoC evidence, and remediation.
+- **Fewer false positives** — every check verifies a baseline (and, where relevant, response content) before reporting; findings are designed for fast manual verification, not blind trust.
 
 ## Checks implemented
 
@@ -58,7 +58,7 @@ pip install -e .
 2. Run the scan:
 
 ```bash
-apiforge -c api.postman.json -u users.json -b http://localhost:8888 -o report.xlsx --json report.json
+apiforge -c api.postman.json -u users.json -b http://localhost:8888 -o report.xlsx --json report.json --word report.docx
 ```
 
 APIForge auto-detects whether -c is a Postman collection or an OpenAPI/Swagger spec.
@@ -94,7 +94,7 @@ Add an admin account to the config. When present, APIForge logs it in and, for e
 }
 ```
 
-The escalation check flags an endpoint only when all hold: the admin can use it, an unauthenticated request is rejected, a regular user can also use it, and the regular user receives non-empty (privileged) data. This three-way comparison plus content check keeps false positives near zero.
+The escalation check flags an endpoint only when all hold: the admin can use it, an unauthenticated request is rejected, a regular user can also use it, and the regular user receives non-empty (privileged) data. This three-way comparison plus content check is designed to minimise false positives, though every finding should still be manually verified.
 
 ### Example — an API using username + custom header (e.g. Pixi)
 
@@ -126,7 +126,7 @@ apiforge -c samples/vulnshop.postman.json -u samples/users.json -b http://localh
 
 ## Methodology
 
-Every check follows a baseline -> attack -> compare pattern: establish legitimate behaviour, send the malicious/unauthorized request, and only report when the API behaves incorrectly relative to the baseline. This evidence-based approach is what keeps false positives low. APIForge performs dynamic (DAST) testing against a running API and focuses on the authentication and authorization flaws that cause most real-world API breaches.
+Every check follows a baseline -> attack -> compare pattern: establish legitimate behaviour, send the malicious/unauthorized request, and only report when the API behaves incorrectly relative to the baseline. This evidence-based approach is designed to reduce false positives, but findings are meant to be manually verified, not trusted blindly. APIForge performs dynamic (DAST) testing against a running API and focuses on the authentication and authorization flaws that cause most real-world API breaches.
 
 ## Architecture
 
@@ -148,6 +148,7 @@ users.json --> Authenticator --> {user_a, user_b, admin? sessions}
 - checks/ — one file per security check (plugin-based)
 - scanner.py — runs applicable checks across endpoints, deduplicates findings
 - reporter/report.py — Excel + JSON output
+- reporter/report_word.py — Word report with annotated PoC evidence images
 - cli.py — command-line interface, format auto-detection, config wiring
 
 ## Development
@@ -162,7 +163,7 @@ pytest tests/ -q
 - Pre-request script handling (for collections that set tokens/IDs dynamically)
 - Additional checks: CORS misconfiguration, SSRF, verbose errors, improper inventory
 - Response-content diffing for even more precise authorization findings
-- Word/PDF report export and an executive-summary sheet
+- PDF report export
 - OAuth 2.0 and API-key authentication flows
 
 ## License

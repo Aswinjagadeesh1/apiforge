@@ -119,6 +119,7 @@ class BolaDynamicCheck(BaseCheck):
             return self._finding(
                 endpoint=Endpoint(name=endpoint.name, method="GET",
                                   raw_url=detail_path, path=detail_path),
+                attack_response=b_detail,
                 description=(
                     f"User B accessed object '{target_id}' owned by User A at "
                     f"'{detail_path}'. The identifier was discovered dynamically "
