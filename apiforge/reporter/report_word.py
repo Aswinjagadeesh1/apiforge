@@ -46,9 +46,9 @@ _OWASP_API_TOP10 = [
 _DEFAULT_META = {
     "report_title": "API Security Assessment Report",
     "is_reassessment": False,
-    "vendor_name": "Adiroha Solutions Private Limited",
-    "vendor_address": "5th Floor, Balaraj's Arcade, Whitefield, Bengaluru, Karnataka 560066",
-    "vendor_contact": "info@adiroha.com  |  https://www.adiroha.com",
+    "vendor_name": "Company Name",
+    "vendor_address": "Company Address",
+    "vendor_contact": "",
     "test_type": "Grey Box Testing",
     "classification": "Client Confidential",
     "client_name": "",
