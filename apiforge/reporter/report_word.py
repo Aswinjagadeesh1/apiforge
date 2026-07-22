@@ -269,6 +269,15 @@ def write_word_report(findings, output_path, target=None, meta=None):
         if hit:
             cells[2].paragraphs[0].runs[0].font.color.rgb = RGBColor.from_string("2E7D32")
 
+    # Tell Word/LibreOffice to update all fields (incl. the TOC) on open,
+    # so the Table of Contents populates without a manual F9.
+    try:
+        from docx.oxml import OxmlElement
+        _upd = OxmlElement('w:updateFields')
+        _upd.set(qn('w:val'), 'true')
+        doc.settings.element.append(_upd)
+    except Exception:
+        pass
     doc.save(str(output_path))
     # PoC PNGs are already embedded; clean the temp dir
     for fn in os.listdir(tmp):
