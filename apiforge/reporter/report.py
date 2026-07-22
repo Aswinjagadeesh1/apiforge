@@ -22,19 +22,18 @@ _SEVERITY_FILL = {
 
 _SEVERITY_ORDER = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"]
 
-_COLUMNS = [
+_SUMMARY_COLUMNS = [
+    ("S.No", 6),
     ("Severity", 12),
     ("CVSS", 8),
-    ("Check ID", 22),
-    ("Title", 32),
-    ("OWASP Category", 40),
+    ("Title", 38),
+    ("OWASP Category", 38),
     ("CWE", 10),
     ("Method", 9),
-    ("Endpoint", 40),
-    ("Description", 60),
-    ("PoC Request", 45),
-    ("PoC Response", 45),
-    ("Remediation", 55),
+    ("Endpoint", 44),
+    ("Description", 55),
+    ("Remediation", 50),
+    ("PoC", 8),
 ]
 
 
@@ -45,18 +44,34 @@ class Reporter:
         output_path: str | Path,
         target: str | None = None,
     ) -> None:
+        import os
+        import tempfile
+
         wb = Workbook()
 
-        # ---- Sheet 1: Executive Summary ----
+        # ---- Sheet 1: Executive Summary (unchanged) ----
         summary = wb.active
         summary.title = "Executive Summary"
         self._build_summary(summary, findings, target)
 
-        # ---- Sheet 2: Findings (the detailed table) ----
-        ws = wb.create_sheet("Findings")
-        self._build_findings(ws, findings)
+        ordered = sorted(findings, key=lambda f: (f.severity.rank, f.check_id))
 
-        wb.save(str(output_path))
+        # ---- Sheet 3: PoC detail (build first so we know anchor rows) ----
+        poc_ws = wb.create_sheet("PoC")
+        tmp = tempfile.mkdtemp(prefix="apiforge_xlsx_poc_")
+        try:
+            anchors = self._build_poc_sheet(poc_ws, ordered, tmp)
+
+            # ---- Sheet 2: Findings summary with POC hyperlinks ----
+            findings_ws = wb.create_sheet("Findings")
+            wb.move_sheet("Findings", -(len(wb.sheetnames) - 2))
+            self._build_findings(findings_ws, ordered, anchors)
+
+            wb.save(str(output_path))
+        finally:
+            for fn in os.listdir(tmp):
+                os.remove(os.path.join(tmp, fn))
+            os.rmdir(tmp)
 
     def _build_summary(self, ws, findings: list[Finding], target: str | None) -> None:
         # Title banner
@@ -125,10 +140,10 @@ class Reporter:
         ws.column_dimensions["C"].width = 12
         ws.column_dimensions["D"].width = 12
 
-    def _build_findings(self, ws, findings: list[Finding]) -> None:
+    def _build_findings(self, ws, ordered, anchors) -> None:
         header_fill = PatternFill("solid", fgColor="1F3A5F")
         header_font = Font(bold=True, color="FFFFFF", size=11)
-        for col, (name, width) in enumerate(_COLUMNS, 1):
+        for col, (name, width) in enumerate(_SUMMARY_COLUMNS, 1):
             cell = ws.cell(row=1, column=col, value=name)
             cell.fill = header_fill
             cell.font = header_font
@@ -137,32 +152,62 @@ class Reporter:
             )
             ws.column_dimensions[get_column_letter(col)].width = width
 
-        ordered = sorted(findings, key=lambda f: (f.severity.rank, f.check_id))
-        for row, f in enumerate(ordered, 2):
+        for row, (i, f) in enumerate(enumerate(ordered, 1), 2):
             values = [
+                i,
                 f.severity.value,
                 f.cvss_score,
-                f.check_id,
                 f.title,
                 f.owasp_category,
                 f.cwe,
                 f.method,
                 f.endpoint,
                 f.description,
-                f.poc_request,
-                f.poc_response,
                 f.remediation,
             ]
             for col, value in enumerate(values, 1):
                 cell = ws.cell(row=row, column=col, value=value)
                 cell.alignment = Alignment(vertical="top", wrap_text=True)
-            sev_cell = ws.cell(row=row, column=1)
+            sev_cell = ws.cell(row=row, column=2)
             sev_cell.fill = PatternFill(
                 "solid", fgColor=_SEVERITY_FILL.get(f.severity.value, "FFFFFF")
             )
             sev_cell.font = Font(bold=True, color="FFFFFF")
+            poc = ws.cell(row=row, column=11, value="POC")
+            poc.hyperlink = f"#PoC!A{anchors[i]}"
+            poc.font = Font(bold=True, color="1155CC", underline="single")
+            poc.alignment = Alignment(horizontal="center", vertical="center")
 
         ws.freeze_panes = "A2"
+
+    def _build_poc_sheet(self, ws, ordered, tmp) -> dict:
+        """Nhance-style detail sheet: per finding, a header block + the embedded
+        annotated request/response screenshot + remediation. Returns {i: anchor_row}."""
+        import os
+
+        from openpyxl.drawing.image import Image as XLImage
+
+        from apiforge.reporter.poc_render import render_poc
+
+        anchors: dict = {}
+        prow = 1
+        for i, f in enumerate(ordered, 1):
+            anchors[i] = prow
+            title = ws.cell(row=prow, column=1, value=f"{i}.  {f.title}")
+            title.font = Font(bold=True, size=13, color="1F3A5F")
+            prow += 1
+            img_path = os.path.join(tmp, f"poc_{i}.png")
+            render_poc(
+                f.poc_request, f.poc_response, img_path,
+                highlight=getattr(f, "evidence", None),
+                caption=getattr(f, "evidence_caption", None),
+            )
+            img = XLImage(img_path)
+            img.width = int(img.width * 0.62)
+            img.height = int(img.height * 0.62)
+            ws.add_image(img, f"A{prow}")
+            prow += max(18, int(img.height / 20) + 2) + 2
+        return anchors
 
     def to_json(self, findings: list[Finding], output_path: str | Path) -> None:
         data = [f.model_dump() for f in findings]
