@@ -166,16 +166,20 @@ def _print_findings(findings: list) -> None:
         console.print("\n[bold green]No findings.[/bold green] "
                       "(Verify the target is reachable and the checks applied.)")
         return
-    table = Table(title=f"\nFindings ({len(findings)})", show_lines=True)
+    from apiforge.reporter.report import group_findings
+    groups = group_findings(findings)
+    table = Table(title=f"\nFindings ({len(groups)})", show_lines=True)
     table.add_column("Severity", no_wrap=True)
     table.add_column("Check")
-    table.add_column("Endpoint")
-    for f in sorted(findings, key=lambda x: x.severity.rank):
-        style = _SEV_COLOR.get(f.severity.value, "white")
+    table.add_column("Affected Endpoint(s)")
+    for g in groups:
+        style = _SEV_COLOR.get(g["severity"].value, "white")
+        eps = g["endpoints"]
+        ep_disp = eps[0] if len(eps) == 1 else f"{eps[0]}  (+{len(eps) - 1} more)"
         table.add_row(
-            f"[{style}]{f.severity.value}[/{style}]",
-            f.title,
-            f"{f.method} {f.endpoint}",
+            f"[{style}]{g['severity'].value}[/{style}]",
+            g["title"],
+            ep_disp,
         )
     console.print(table)
 

@@ -89,10 +89,10 @@ class MassAssignmentCheck(BaseCheck):
                 ),
                 poc_response=f"HTTP {resp.status_code}\n{self._truncate(resp.text)}",
                 remediation=(
-                    "Never bind request bodies directly to internal objects. Use "
-                    "an explicit allow-list of client-modifiable fields (a DTO or "
-                    "schema) and ignore or reject any field not on that list, "
-                    "especially privilege and role attributes."
+                    f"On {endpoint.method} {endpoint.path}, stop binding the "
+                    f"request body directly to the object. Bind an explicit "
+                    f"allow-list of client-writable fields and reject or ignore the "
+                    f"privileged field(s) accepted here ({', '.join(reflected)})."
                 ),
             )
         return None

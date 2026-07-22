@@ -29,8 +29,8 @@ _SUMMARY_COLUMNS = [
     ("Title", 38),
     ("OWASP Category", 38),
     ("CWE", 10),
-    ("Method", 9),
-    ("Endpoint", 44),
+    ("# EP", 6),
+    ("Affected Endpoints", 46),
     ("Description", 55),
     ("Remediation", 50),
     ("PoC", 8),
@@ -54,18 +54,18 @@ class Reporter:
         summary.title = "Executive Summary"
         self._build_summary(summary, findings, target)
 
-        ordered = sorted(findings, key=lambda f: (f.severity.rank, f.check_id))
+        groups = group_findings(findings)
 
         # ---- Sheet 3: PoC detail (build first so we know anchor rows) ----
         poc_ws = wb.create_sheet("PoC")
         tmp = tempfile.mkdtemp(prefix="apiforge_xlsx_poc_")
         try:
-            anchors = self._build_poc_sheet(poc_ws, ordered, tmp)
+            anchors = self._build_poc_sheet(poc_ws, groups, tmp)
 
             # ---- Sheet 2: Findings summary with POC hyperlinks ----
             findings_ws = wb.create_sheet("Findings")
             wb.move_sheet("Findings", -(len(wb.sheetnames) - 2))
-            self._build_findings(findings_ws, ordered, anchors)
+            self._build_findings(findings_ws, groups, anchors)
 
             wb.save(str(output_path))
         finally:
@@ -86,7 +86,7 @@ class Reporter:
         meta = [
             ("Target", target or "N/A"),
             ("Scan Date", datetime.now().strftime("%Y-%m-%d %H:%M")),
-            ("Total Findings", str(len(findings))),
+            ("Total Findings", str(len(group_findings(findings)))),
             ("Standard", "OWASP API Security Top 10 (2023)"),
         ]
         row = 3
@@ -104,7 +104,7 @@ class Reporter:
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
         row += 1
 
-        sev_counts = Counter(f.severity.value for f in findings)
+        sev_counts = Counter(g["severity"].value for g in group_findings(findings))
         for sev in _SEVERITY_ORDER:
             count = sev_counts.get(sev, 0)
             if count == 0:
@@ -126,7 +126,7 @@ class Reporter:
         ws.merge_cells(start_row=row, start_column=1, end_row=row, end_column=2)
         row += 1
 
-        cat_counts = Counter(f.owasp_category for f in findings)
+        cat_counts = Counter(g["owasp"] for g in group_findings(findings))
         for cat, count in sorted(cat_counts.items()):
             ws.cell(row=row, column=1, value=cat).alignment = Alignment(wrap_text=True)
             ws.cell(row=row, column=2, value=count).alignment = Alignment(
@@ -140,38 +140,27 @@ class Reporter:
         ws.column_dimensions["C"].width = 12
         ws.column_dimensions["D"].width = 12
 
-    def _build_findings(self, ws, ordered, anchors) -> None:
+    def _build_findings(self, ws, groups, anchors) -> None:
         header_fill = PatternFill("solid", fgColor="1F3A5F")
         header_font = Font(bold=True, color="FFFFFF", size=11)
         for col, (name, width) in enumerate(_SUMMARY_COLUMNS, 1):
             cell = ws.cell(row=1, column=col, value=name)
             cell.fill = header_fill
             cell.font = header_font
-            cell.alignment = Alignment(
-                horizontal="center", vertical="center", wrap_text=True
-            )
+            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
             ws.column_dimensions[get_column_letter(col)].width = width
 
-        for row, (i, f) in enumerate(enumerate(ordered, 1), 2):
+        for row, (i, g) in enumerate(enumerate(groups, 1), 2):
             values = [
-                i,
-                f.severity.value,
-                f.cvss_score,
-                f.title,
-                f.owasp_category,
-                f.cwe,
-                f.method,
-                f.endpoint,
-                f.description,
-                f.remediation,
+                i, g["severity"].value, g["cvss"], g["title"], g["owasp"], g["cwe"],
+                len(g["endpoints"]), "\n".join(g["endpoints"]),
+                g["description"], g["remediation"],
             ]
             for col, value in enumerate(values, 1):
                 cell = ws.cell(row=row, column=col, value=value)
                 cell.alignment = Alignment(vertical="top", wrap_text=True)
             sev_cell = ws.cell(row=row, column=2)
-            sev_cell.fill = PatternFill(
-                "solid", fgColor=_SEVERITY_FILL.get(f.severity.value, "FFFFFF")
-            )
+            sev_cell.fill = PatternFill("solid", fgColor=_SEVERITY_FILL.get(g["severity"].value, "FFFFFF"))
             sev_cell.font = Font(bold=True, color="FFFFFF")
             poc = ws.cell(row=row, column=11, value="POC")
             poc.hyperlink = f"#PoC!A{anchors[i]}"
@@ -180,9 +169,9 @@ class Reporter:
 
         ws.freeze_panes = "A2"
 
-    def _build_poc_sheet(self, ws, ordered, tmp) -> dict:
-        """Nhance-style detail sheet: per finding, a header block + the embedded
-        annotated request/response screenshot + remediation. Returns {i: anchor_row}."""
+    def _build_poc_sheet(self, ws, groups, tmp) -> dict:
+        """PoC detail sheet: per group, the vuln name + one annotated screenshot
+        per affected endpoint. Returns {i: anchor_row} for the summary links."""
         import os
 
         from openpyxl.drawing.image import Image as XLImage
@@ -191,22 +180,27 @@ class Reporter:
 
         anchors: dict = {}
         prow = 1
-        for i, f in enumerate(ordered, 1):
+        for i, g in enumerate(groups, 1):
             anchors[i] = prow
-            title = ws.cell(row=prow, column=1, value=f"{i}.  {f.title}")
+            title = ws.cell(row=prow, column=1, value=f"{i}.  {g['title']}")
             title.font = Font(bold=True, size=13, color="1F3A5F")
             prow += 1
-            img_path = os.path.join(tmp, f"poc_{i}.png")
-            render_poc(
-                f.poc_request, f.poc_response, img_path,
-                highlight=getattr(f, "evidence", None),
-                caption=getattr(f, "evidence_caption", None),
-            )
-            img = XLImage(img_path)
-            img.width = int(img.width * 0.62)
-            img.height = int(img.height * 0.62)
-            ws.add_image(img, f"A{prow}")
-            prow += max(18, int(img.height / 20) + 2) + 2
+            for j, m in enumerate(g["members"], 1):
+                lbl = ws.cell(row=prow, column=1, value=f"{m.method} {m.endpoint}")
+                lbl.font = Font(italic=True, size=10, color="555555")
+                prow += 1
+                img_path = os.path.join(tmp, f"poc_{i}_{j}.png")
+                render_poc(
+                    m.poc_request, m.poc_response, img_path,
+                    highlight=getattr(m, "evidence", None),
+                    caption=getattr(m, "evidence_caption", None),
+                )
+                img = XLImage(img_path)
+                img.width = int(img.width * 0.62)
+                img.height = int(img.height * 0.62)
+                ws.add_image(img, f"A{prow}")
+                prow += max(18, int(img.height / 20) + 2) + 1
+            prow += 2
         return anchors
 
     def to_json(self, findings: list[Finding], output_path: str | Path) -> None:
@@ -320,3 +314,39 @@ def write_word_report(findings, output_path, target=None):
         doc.add_paragraph("─" * 40)
 
     doc.save(str(output_path))
+
+
+def group_findings(findings):
+    """Group findings by check so one root-cause vuln across many endpoints is
+    reported once, with all affected endpoints, not N separate findings."""
+    from collections import OrderedDict
+    buckets = OrderedDict()
+    for f in findings:
+        buckets.setdefault(f.check_id, []).append(f)
+    groups = []
+    for members in buckets.values():
+        rep = min(members, key=lambda m: m.severity.rank)
+        seen, eps = set(), []
+        for m in members:
+            key = f"{m.method} {m.endpoint}"
+            if key not in seen:
+                seen.add(key)
+                eps.append(key)
+        if len(members) > 1:
+            desc = (f"This vulnerability was identified on {len(eps)} endpoints "
+                    f"(listed under Affected Endpoints). " + rep.description)
+        else:
+            desc = rep.description
+        groups.append({
+            "title": rep.title,
+            "severity": rep.severity,
+            "cvss": max(m.cvss_score for m in members),
+            "owasp": rep.owasp_category,
+            "cwe": rep.cwe,
+            "endpoints": eps,
+            "description": desc,
+            "remediation": rep.remediation,
+            "members": members,
+        })
+    groups.sort(key=lambda g: g["severity"].rank)
+    return groups

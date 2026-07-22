@@ -74,10 +74,12 @@ class BolaNumericCheck(BaseCheck):
                 endpoint=endpoint,
                 attack_response=resp_b,
                 description=(
-                    f"User B successfully retrieved User A's resource at "
-                    f"'{endpoint.path}'. The server returned an identical response "
-                    f"body to both users, indicating no object-level ownership "
-                    f"check is enforced."
+                    f"A regular user (User B) retrieved another user's (User A) "
+                    f"object at {endpoint.method} {endpoint.path} by referencing "
+                    f"object ID {(endpoint.numeric_ids() or ['(numeric)'])[0]}. "
+                    f"The server returned an identical response body to both the "
+                    f"owner and a non-owner, confirming no object-level ownership "
+                    f"check is enforced on this endpoint."
                 ),
                 poc_request=(
                     f"{endpoint.method} {endpoint.path}\n"
@@ -89,11 +91,13 @@ class BolaNumericCheck(BaseCheck):
                     f"{self._truncate(resp_b.text)}"
                 ),
                 remediation=(
-                    "Enforce object-level authorization on the server side. For "
-                    "every request that references an object by ID, verify the "
-                    "authenticated user owns or is permitted to access that object "
-                    "before returning data. Prefer non-sequential identifiers "
-                    "(UUIDs) to reduce enumeration risk."
+                    f"Add a server-side ownership check to {endpoint.method} "
+                    f"{endpoint.path}: before returning object "
+                    f"{(endpoint.numeric_ids() or ['the referenced ID'])[0]}, "
+                    f"confirm the authenticated user owns or may access it and "
+                    f"return 403/404 otherwise. Sequential numeric IDs are "
+                    f"trivially enumerable; prefer UUIDs as defence-in-depth, not "
+                    f"as a replacement for the ownership check."
                 ),
             )
         return None

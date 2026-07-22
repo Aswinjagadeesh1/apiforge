@@ -70,10 +70,11 @@ class RateLimitingCheck(BaseCheck):
                     f"{len(responses)} requests."
                 ),
                 remediation=(
-                    "Implement rate limiting on authentication and other "
-                    "sensitive endpoints (per-IP and per-account quotas, "
-                    "backoff, CAPTCHA after repeated failures). Return HTTP 429 "
-                    "when limits are exceeded."
+                    f"Apply rate limiting to {endpoint.method} {endpoint.path} "
+                    f"(per-IP and per-account quotas, backoff, CAPTCHA after "
+                    f"repeated failures) and return HTTP 429 when exceeded. This "
+                    f"endpoint accepted {len(responses)} rapid requests with no "
+                    f"throttling."
                 ),
             )
         return None

@@ -134,10 +134,10 @@ class BolaDynamicCheck(BaseCheck):
                 ),
                 poc_response=f"HTTP {b_detail.status_code}\n{self._truncate(b_detail.text)}",
                 remediation=(
-                    "Enforce object-level authorization: verify the authenticated "
-                    "user owns or may access the requested object before returning "
-                    "it. Unguessable identifiers are not a substitute for an "
-                    "ownership check."
+                    f"Add a server-side ownership check to {detail_path}: verify "
+                    f"the authenticated user owns object '{target_id}' (per the "
+                    f"'{self.owner_field}' field) before returning it. Unguessable "
+                    f"identifiers are not a substitute for this check."
                 ),
             )
         return None

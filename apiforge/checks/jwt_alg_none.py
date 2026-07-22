@@ -108,9 +108,11 @@ class JWTAlgNoneCheck(BaseCheck):
                 ),
                 poc_response=f"HTTP {attack.status_code}\n{self._truncate(attack.text)}",
                 remediation=(
-                    "Reject tokens using the 'none' algorithm. Explicitly configure "
-                    "the JWT library to only accept the expected signing algorithm "
-                    "(e.g. RS256 or HS256) and always verify the signature."
+                    f"Configure the JWT verifier behind {endpoint.path} (and every "
+                    f"endpoint sharing this auth layer) to reject the 'none' "
+                    f"algorithm and pin the expected signing algorithm (e.g. RS256 "
+                    f"or HS256); always verify the signature. This is a single "
+                    f"auth-layer fix, not a per-endpoint change."
                 ),
             )
         return None

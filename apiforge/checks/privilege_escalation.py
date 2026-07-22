@@ -129,11 +129,11 @@ class PrivilegeEscalationCheck(BaseCheck):
                 ),
                 poc_response=f"HTTP {reg_resp.status_code}\n{self._truncate(reg_resp.text)}",
                 remediation=(
-                    "Enforce role-based access control (RBAC) at the function "
-                    "level on the server. Verify the caller's role/permissions "
-                    "before executing privileged operations; return 403 Forbidden "
-                    "for users whose role does not permit the action. Do not rely "
-                    "on authentication alone or on the client hiding the endpoint."
+                    f"Add a function-level role check to {endpoint.method} "
+                    f"{endpoint.path}. It currently authenticates the caller but "
+                    f"does not verify role, so a regular user can perform this "
+                    f"admin-capable action. Return 403 for roles that lack "
+                    f"permission; authentication alone is not authorization."
                 ),
             )
         return None

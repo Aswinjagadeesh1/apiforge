@@ -93,10 +93,10 @@ class SensitiveDataExposureCheck(BaseCheck):
                 ),
                 poc_response=f"HTTP 200\n{self._truncate(text)}",
                 remediation=(
-                    "Return only the fields the client needs. Filter sensitive "
-                    "attributes (password hashes, secrets, tokens, national IDs, "
-                    "card data) out of API responses using explicit output "
-                    "schemas / serializers rather than returning full objects."
+                    f"Remove the sensitive field(s) "
+                    f"{', '.join(sorted(set(found)))} from the {endpoint.path} "
+                    f"response. Return only the attributes the client needs via an "
+                    f"explicit output schema/serializer rather than the full object."
                 ),
             )
         return None

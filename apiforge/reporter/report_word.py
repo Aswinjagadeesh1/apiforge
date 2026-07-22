@@ -217,6 +217,69 @@ def _inject_severity_chart(path, counts):
 
 
 # ================================ report ===================================
+_IMPACT = {
+    "API1_BOLA_NUMERIC": [
+        "Unauthorized access to other users' private objects and data",
+        "Exposure of PII and records belonging to other accounts",
+        "Horizontal privilege escalation across user accounts",
+        "Large-scale data harvesting by enumerating sequential IDs",
+        "Loss of user trust and potential regulatory non-compliance",
+    ],
+    "API1_BOLA_DYNAMIC": [
+        "Unauthorized access to other users' private objects and data",
+        "Exposure of PII and records belonging to other accounts",
+        "Horizontal privilege escalation across user accounts",
+        "Loss of user trust and potential regulatory non-compliance",
+    ],
+    "API5_BFLA_ADMIN": [
+        "Regular users invoking administrative functionality",
+        "Unauthorized data modification or deletion",
+        "Privilege escalation to administrator-level actions",
+        "Bypass of intended role and function boundaries",
+    ],
+    "API5_PRIV_ESCALATION": [
+        "Vertical privilege escalation from a regular user to admin capabilities",
+        "Unauthorized administrative actions performed by normal users",
+        "Complete failure of role-based access control",
+        "Potential full compromise of the authorization model",
+    ],
+    "API3_MASS_ASSIGNMENT": [
+        "Attackers setting privileged fields such as isAdmin or role",
+        "Account takeover and privilege escalation",
+        "Tampering with server-controlled attributes and business logic",
+        "Corruption of data integrity",
+    ],
+    "API3_DATA_EXPOSURE": [
+        "Leakage of PII, credentials, tokens, or secrets to any caller",
+        "Increased attack surface for follow-on attacks",
+        "Regulatory and compliance violations (e.g. GDPR, PCI-DSS)",
+        "Loss of confidentiality of sensitive business data",
+    ],
+    "API2_JWT_ALG_NONE": [
+        "Token forgery allowing impersonation of any user, including admins",
+        "Complete authentication bypass",
+        "Unauthorized access to all protected endpoints",
+        "Full account takeover across the application",
+    ],
+    "API2_JWT_WEAK_SECRET": [
+        "Token forgery via a cracked signing secret",
+        "Authentication bypass and user impersonation",
+        "Unauthorized access to protected resources",
+        "Full account takeover if the secret is recovered",
+    ],
+    "API4_NO_RATE_LIMIT": [
+        "Brute-force attacks against credentials, OTPs, and tokens",
+        "Resource exhaustion and denial-of-service conditions",
+        "Increased infrastructure cost from abuse and automation",
+        "Degraded availability for legitimate users",
+    ],
+}
+_IMPACT_DEFAULT = [
+    "Potential unauthorized access or abuse of the affected functionality",
+    "Risk to the confidentiality, integrity, or availability of the API",
+]
+
+
 def write_word_report(findings, output_path, target=None, meta=None):
     from docx import Document
     from docx.shared import Pt, RGBColor, Inches
@@ -288,6 +351,9 @@ def write_word_report(findings, output_path, target=None, meta=None):
         if color:
             r.font.color.rgb = RGBColor.from_string(color)
 
+    def bullet(text):
+        doc.add_paragraph(str(text), style="List Bullet")
+
     def toc():
         p = doc.add_paragraph(); run = p.add_run()
         parts = [("fld", "begin"), ("instr", 'TOC \\o "1-2" \\h \\z \\u'),
@@ -301,8 +367,9 @@ def write_word_report(findings, output_path, target=None, meta=None):
                 e = OxmlElement("w:fldChar"); e.set(qn("w:fldCharType"), val)
             run._r.append(e)
 
-    ordered = sorted(findings, key=lambda f: (f.severity.rank, f.check_id))
-    counts = Counter(f.severity.value for f in findings)
+    from apiforge.reporter.report import group_findings
+    groups = group_findings(findings)
+    counts = Counter(g["severity"].value for g in groups)
 
     # ---------- COVER ----------
     doc.add_paragraph("\n\n")
@@ -389,14 +456,14 @@ def write_word_report(findings, output_path, target=None, meta=None):
     h2("4.1 Vulnerabilities Ordered by Severity")
     t = new_table(5)
     header_row(t, ["S.No", "Vulnerability", "Severity", "CVSS", "OWASP"])
-    for i, f in enumerate(ordered, 1):
+    for i, g in enumerate(groups, 1):
         cells = t.add_row().cells
         set_cell(cells[0], i)
-        set_cell(cells[1], f.title)
-        set_cell(cells[2], f.severity.value, bold=True, white=True,
-                 fill=_SEV_HEX.get(f.severity.value, "FFFFFF"), align=WD_ALIGN_PARAGRAPH.CENTER)
-        set_cell(cells[3], f.cvss_score, align=WD_ALIGN_PARAGRAPH.CENTER)
-        set_cell(cells[4], (f.owasp_category or "").split(" ")[0].split(":")[0] or f.owasp_category)
+        set_cell(cells[1], g["title"])
+        set_cell(cells[2], g["severity"].value, bold=True, white=True,
+                 fill=_SEV_HEX.get(g["severity"].value, "FFFFFF"), align=WD_ALIGN_PARAGRAPH.CENTER)
+        set_cell(cells[3], g["cvss"], align=WD_ALIGN_PARAGRAPH.CENTER)
+        set_cell(cells[4], (g["owasp"] or "").split(" ")[0].split(":")[0] or g["owasp"])
 
     h2("4.2 Total No. of Vulnerabilities and Severity Level")
     cmark = doc.add_paragraph(); cmark.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -405,7 +472,7 @@ def write_word_report(findings, output_path, target=None, meta=None):
     t = new_table(len(present) + 1)
     header_row(t, ["Total"] + [s.title() for s in present])
     cells = t.add_row().cells
-    set_cell(cells[0], len(findings), bold=True, align=WD_ALIGN_PARAGRAPH.CENTER)
+    set_cell(cells[0], len(groups), bold=True, align=WD_ALIGN_PARAGRAPH.CENTER)
     for j, sev in enumerate(present, 1):
         set_cell(cells[j], counts[sev], bold=True, white=True,
                  fill=_SEV_HEX[sev], align=WD_ALIGN_PARAGRAPH.CENTER)
@@ -413,27 +480,31 @@ def write_word_report(findings, output_path, target=None, meta=None):
 
     # ---------- 5 FINDINGS ----------
     h1("5. Vulnerabilities List with Remediation")
-    for i, f in enumerate(ordered, 1):
-        h2(f"5.{i}  {f.title}")
-        field_label("Severity"); value(f.severity.value, _SEV_HEX.get(f.severity.value), bold=True)
-        if M["is_reassessment"]:
-            status = getattr(f, "status", "Open")
-            field_label("Status After Reassessment")
-            value(status, "00B050" if str(status).lower() == "closed" else "FF0000", bold=True)
-        field_label("Affected Endpoint"); value(f"{f.method} {f.endpoint}")
-        field_label("OWASP Category"); value(f"{f.owasp_category}   (CVSS {f.cvss_score}, {f.cwe})")
-        field_label("Description"); value(f.description)
+    for i, g in enumerate(groups, 1):
+        h2(f"5.{i}  {g['title']}")
+        field_label("Severity"); value(g["severity"].value, _SEV_HEX.get(g["severity"].value), bold=True)
+        field_label("Affected Endpoints")
+        for ep in g["endpoints"]:
+            bullet(ep)
+        field_label("OWASP Category"); value(f"{g['owasp']}   (CVSS {g['cvss']}, {g['cwe']})")
+        field_label("Description"); value(g["description"])
         field_label("Proof of Concept")
-        img_path = os.path.join(tmp, f"poc_{i}.png")
-        render_poc(f.poc_request, f.poc_response, img_path,
-                   highlight=getattr(f, "evidence", None),
-                   caption=getattr(f, "evidence_caption", None))
-        pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        pic.add_run().add_picture(img_path, width=Inches(6.3))
-        cap = doc.add_paragraph(); cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        cr = cap.add_run(f"Figure 5.{i}: annotated request/response evidence for {f.title}.")
-        cr.italic = True; cr.font.size = Pt(9)
-        field_label("Remediation"); value(f.remediation)
+        for j, m in enumerate(g["members"], 1):
+            img_path = os.path.join(tmp, f"poc_{i}_{j}.png")
+            render_poc(m.poc_request, m.poc_response, img_path,
+                       highlight=getattr(m, "evidence", None),
+                       caption=getattr(m, "evidence_caption", None))
+            pic = doc.add_paragraph(); pic.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            pic.add_run().add_picture(img_path, width=Inches(6.3))
+            cap = doc.add_paragraph(); cap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            cr = cap.add_run(f"Figure 5.{i}.{j}: {m.method} {m.endpoint}")
+            cr.italic = True; cr.font.size = Pt(9)
+        field_label("Impact")
+        for pt in _IMPACT.get(g["members"][0].check_id, _IMPACT_DEFAULT):
+            bullet(pt)
+        field_label("Remediation")
+        for pt in [x.strip() for x in re.split(r"(?<=\.)\s+(?=[A-Z])", g["remediation"]) if x.strip()]:
+            bullet(pt)
         doc.add_page_break()
 
     # ---------- Tools / Conclusion / Way Ahead ----------
@@ -442,7 +513,7 @@ def write_word_report(findings, output_path, target=None, meta=None):
         value("• " + tool)
     ch = counts.get("CRITICAL", 0) + counts.get("HIGH", 0)
     h1("Conclusion")
-    value(f'The assessment identified {len(findings)} finding(s), {ch} of Critical/High severity. '
+    value(f'The assessment identified {len(groups)} finding(s), {ch} of Critical/High severity. '
           f'The most serious issues concern authentication and object-level authorization - the flaw '
           f'classes behind most real-world API breaches. Prioritise remediation of Critical/High items.')
     h1("Way Ahead")

@@ -74,10 +74,10 @@ class BFLACheck(BaseCheck):
                 ),
                 poc_response=f"HTTP {resp.status_code}\n{self._truncate(resp.text)}",
                 remediation=(
-                    "Enforce role-based access control on every administrative and "
-                    "privileged endpoint. Deny by default; require an explicit "
-                    "authorization check that the caller holds the necessary role "
-                    "before executing privileged functionality."
+                    f"Enforce a server-side role check on {endpoint.method} "
+                    f"{endpoint.path}: require the caller to hold the administrative "
+                    f"role before executing this function, deny by default, and "
+                    f"return 403 for non-admin users."
                 ),
             )
         return None
