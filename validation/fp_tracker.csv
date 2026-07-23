@@ -1,0 +1,17 @@
+﻿collection,check_id,severity,endpoint,claimed_evidence,verdict(TP/FP/UNSURE),reproduced(Y/N),notes
+crapi,API2_JWT_ALG_NONE,CRITICAL,GET /identity/api/v2/user/dashboard,forged alg:none token returned 200,TP,Y,
+crapi,API2_JWT_ALG_NONE,CRITICAL,GET /identity/api/v2/vehicle/vehicles,forged alg:none token returned 200,TP,Y,
+crapi,API2_JWT_ALG_NONE,CRITICAL,GET /community/api/v2/community/posts/recent,forged alg:none token returned 200,TP,Y,
+crapi,API2_JWT_ALG_NONE,CRITICAL,GET /workshop/api/mechanic/service_requests,forged alg:none token returned 200,TP,Y,
+crapi,API2_JWT_ALG_NONE,CRITICAL,GET /workshop/api/shop/products,forged alg:none token returned 200,TP,Y,
+crapi,API2_JWT_ALG_NONE,CRITICAL,GET /workshop/api/shop/orders/all,forged alg:none token returned 200,TP,Y,
+crapi,API2_JWT_ALG_NONE,CRITICAL,GET /workshop/api/management/users/all,forged alg:none token returned 200,TP,Y,
+crapi,API5_BFLA_ADMIN,HIGH,GET /workshop/api/management/users/all,regular user reached admin function,TP,Y,
+crapi,API5_PRIV_ESCALATION,HIGH,GET /workshop/api/management/users/all,regular user got privileged data,TP,Y,
+crapi,API4_NO_RATE_LIMIT,MEDIUM,POST /identity/api/auth/signup,no 429 across N requests,TP,Y,
+crapi,API4_NO_RATE_LIMIT,MEDIUM,POST /identity/api/auth/login,no 429 across N requests,TP,Y,
+crapi,API4_NO_RATE_LIMIT,MEDIUM,POST /identity/api/auth/verify,no 429 across N requests,TP,Y,
+crapi,API4_NO_RATE_LIMIT,MEDIUM,POST /identity/api/auth/forget-password,no 429 across N requests,TP,Y,
+crapi,API4_NO_RATE_LIMIT,MEDIUM,POST /identity/api/v2/user/verify-email-token,no 429 across N requests,TP,Y,
+
+,,,TOTAL: 14 | TP: 14 | FP: 0 | crAPI

