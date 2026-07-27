@@ -11,6 +11,9 @@ from apiforge.checks.jwt_weak_secret import JWTWeakSecretCheck
 from apiforge.checks.rate_limiting import RateLimitingCheck
 from apiforge.checks.bola_dynamic import BolaDynamicCheck
 from apiforge.checks.privilege_escalation import PrivilegeEscalationCheck
+from apiforge.checks.cors import CORSMisconfigurationCheck
+from apiforge.checks.ssrf import SSRFCheck
+from apiforge.checks.misconfiguration import SecurityMisconfigurationCheck
 
 ALL_CHECKS = [
     BolaNumericCheck(),
@@ -22,4 +25,7 @@ ALL_CHECKS = [
     RateLimitingCheck(),
     BolaDynamicCheck(),
     PrivilegeEscalationCheck(),
+    CORSMisconfigurationCheck(),
+    SSRFCheck(),
+    SecurityMisconfigurationCheck(),
 ]
