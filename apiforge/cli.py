@@ -41,6 +41,7 @@ def scan(
     output: Path = typer.Option("apiforge_report.xlsx", "--output", "-o", help="Excel report path."),
     json_output: Optional[Path] = typer.Option(None, "--json", help="Optional JSON report path."),
     word_output: Optional[Path] = typer.Option(None, "--word", help="Optional Word (.docx) report path."),
+    blind_ssrf: bool = typer.Option(False, "--blind-ssrf", help="Enable blind SSRF detection via a local out-of-band listener (target must be able to reach this machine: localhost/Docker/lab)."),
 ) -> None:
     """Scan an API described by a Postman collection for OWASP API Top 10 issues."""
     console.print(
@@ -50,7 +51,7 @@ def scan(
             border_style="cyan",
         )
     )
-    asyncio.run(_run(collection, users, base_url, environment, output, json_output, word_output))
+    asyncio.run(_run(collection, users, base_url, environment, output, json_output, word_output, blind_ssrf))
 
 
 async def _run(
@@ -61,6 +62,7 @@ async def _run(
     output: Path,
     json_output: Optional[Path],
     word_output: Optional[Path] = None,
+    blind_ssrf: bool = False,
 ) -> None:
     # ---- config ----
     with open(users, encoding="utf-8") as f:
@@ -140,7 +142,18 @@ async def _run(
         def on_progress(done: int, total: int) -> None:
             progress.update(task, completed=done, total=max(total, 1))
 
+        oob = None
+        if blind_ssrf:
+            from apiforge.executor.oob_listener import OOBListener
+            adv = OOBListener.docker_host_gateway() or "127.0.0.1"
+            oob = OOBListener(host="0.0.0.0", advertise_host=adv)
+            oob.start()
+            scanner.executor.oob = oob
+            console.print(f"[dim]Blind-SSRF OOB listener on :{oob.port} (advertising {adv})[/dim]")
+
         result = await scanner.scan(endpoints, sessions, on_progress=on_progress)
+        if oob is not None:
+            oob.stop()
     await scanner.close()
 
     # ---- report to console ----

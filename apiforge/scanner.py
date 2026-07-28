@@ -72,6 +72,23 @@ class Scanner:
                 unique.append(f)
         result.findings = unique
 
+        # Cross-check dedup: BFLA and privilege-escalation catch the SAME root
+        # flaw (an admin function reachable by a regular user). When both fire on
+        # the same endpoint, keep only privilege-escalation — it is the stronger,
+        # more specific finding (it also verifies the unauth path returns 401).
+        priv_eps = {
+            (f.method, f.endpoint)
+            for f in result.findings
+            if f.check_id == "API5_PRIV_ESCALATION"
+        }
+        result.findings = [
+            f for f in result.findings
+            if not (
+                f.check_id == "API5_BFLA_ADMIN"
+                and (f.method, f.endpoint) in priv_eps
+            )
+        ]
+
         result.endpoints_scanned = len(endpoints)
         return result
 

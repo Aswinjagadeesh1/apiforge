@@ -95,13 +95,14 @@ class SecurityMisconfigurationCheck(BaseCheck):
             # Only flag a banner that leaks a version number.
             banner = m.group(1).strip()
 
-        if not hits and not banner:
+        # Only STRONG content signals are per-endpoint findings. A version banner
+        # alone (e.g. Server: openresty/1.27.1) is a single global config issue,
+        # not a vuln on every endpoint — reporting it per-endpoint inflates the
+        # report, so it is intentionally NOT flagged here.
+        if not hits:
             return None
 
-        leaked = ", ".join(sorted(set(hits))) if hits else "version banner"
-        detail = []
-        if hits:
-            detail.append(f"leaked: {', '.join(sorted(set(hits)))}")
+        detail = [f"leaked: {', '.join(sorted(set(hits)))}"]
         if banner:
             detail.append(f"version banner: {banner}")
 
