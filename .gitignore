@@ -16,3 +16,10 @@ crapi_report.json
 *_report.xlsx
 *.xlsx
 *.docx
+
+# generated reports
+*_report.docx
+*_report.xlsx
+*_reports.docx
+*_reports.xlsx
+reports.xlsx

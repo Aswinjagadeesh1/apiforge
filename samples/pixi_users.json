@@ -5,6 +5,9 @@
   "password_field": "pass",
   "auth_header": "x-access-token",
   "auth_scheme": "",
-  "user_a": { "user": "test1@test.com", "password": "Password1!" },
-  "user_b": { "user": "test2@test.com", "password": "Password1!" }
+  "bola_id_fields": ["id", "_id"],
+  "bola_owner_field": "email",
+  "user_a": { "user": "usera@test.com", "pass": "Password123!" },
+  "user_b": { "user": "userb@test.com", "pass": "Password123!" },
+  "user_admin": { "user": "admin@test.com", "pass": "Password123!" }
 }

@@ -77,10 +77,24 @@ async def _run(
         "host": base_url,
         "url_mail": "http://localhost:8025",
     }
-    import json as _json
-    with open(collection, encoding="utf-8") as _f:
-        _peek = _json.load(_f)
-    if "swagger" in _peek or "openapi" in _peek:
+    # Detect format from the raw text so YAML specs and http(s) URLs don't crash
+    # a JSON-only peek. Postman collections are always JSON with an "item" key.
+    _collection_str = str(collection)
+    if _collection_str.startswith(("http://", "https://")):
+        import httpx
+        _peek_text = httpx.get(_collection_str, timeout=15.0, verify=False).text
+    else:
+        with open(collection, encoding="utf-8") as _f:
+            _peek_text = _f.read()
+    _is_openapi = False
+    try:
+        import json as _json
+        _peek = _json.loads(_peek_text)
+        _is_openapi = ("swagger" in _peek or "openapi" in _peek)
+    except Exception:
+        # Not JSON -> almost certainly a YAML OpenAPI spec (Postman is always JSON)
+        _is_openapi = ("swagger:" in _peek_text or "openapi:" in _peek_text)
+    if _is_openapi:
         parser = OpenAPIParser(collection, extra_vars=base_vars)
     else:
         parser = PostmanParser(collection, environment_path=environment, extra_vars=base_vars)
@@ -88,31 +102,64 @@ async def _run(
     console.print(f"[green]✓[/green] Parsed [bold]{len(endpoints)}[/bold] endpoints")
 
     # ---- authenticate ----
+    # login_endpoint is only required when at least one user logs in with
+    # credentials; pure token mode does not need it.
     auth = JWTAuthenticator(
         base_url=base_url,
-        login_endpoint=cfg["login_endpoint"],
+        login_endpoint=cfg.get("login_endpoint", ""),
         token_json_path=cfg.get("token_json_path"),
         login_field=cfg.get("login_field", "email"),
-        password_field=cfg.get("password_field", "password"), 
+        password_field=cfg.get("password_field", "password"),
     )
     sessions: dict[str, UserSession] = {}
     try:
-        # Build the list of users to log in. Admin is optional (opt-in for
-        # role-aware privilege-escalation testing).
+        # Build the list of users. Admin is optional (opt-in for role-aware
+        # privilege-escalation testing).
         user_labels = ["user_a", "user_b"]
         if "user_admin" in cfg:
             user_labels.append("user_admin")
+        login_field = cfg.get("login_field", "email")
+        used_token = False
         for label in user_labels:
-            u = cfg[label]
-            login_field = cfg.get("login_field", "email")
-            sessions[label] = await auth.login(
-                label, password=u["password"], **{login_field: u[login_field]}
-            )
+            u = cfg.get(label)
+            if not u:
+                continue
+            if u.get("token"):
+                # Token mode: use the supplied token directly, skip login.
+                sessions[label] = UserSession(
+                    label=label,
+                    email=str(u.get(login_field, u.get("email", label))),
+                    token=str(u["token"]),
+                )
+                used_token = True
+            elif u.get("password") is not None:
+                # Credential mode: log in as before.
+                if not cfg.get("login_endpoint"):
+                    raise RuntimeError(
+                        f"'{label}' uses email/password but no 'login_endpoint' "
+                        f"is set in the users config. Add login_endpoint, or give "
+                        f"'{label}' a 'token' instead."
+                    )
+                sessions[label] = await auth.login(
+                    label, password=u["password"], **{login_field: u[login_field]}
+                )
+            else:
+                raise RuntimeError(
+                    f"'{label}' must have either a 'token' or a "
+                    f"'{login_field}'+'password' pair."
+                )
         # Map the admin config label to the "admin" key the privilege-
         # escalation check looks for.
         if "user_admin" in sessions:
             sessions["admin"] = sessions["user_admin"]
-        console.print("[green]✓[/green] Authenticated users")
+        if used_token:
+            console.print(
+                "[green]✓[/green] Authenticated users "
+                "[dim](token mode — tokens can expire mid-scan; if you see 401s, "
+                "refresh them)[/dim]"
+            )
+        else:
+            console.print("[green]✓[/green] Authenticated users")
     except Exception as exc:
         console.print(f"[red]✗ Authentication failed:[/red] {exc}")
         await auth.close()

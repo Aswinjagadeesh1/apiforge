@@ -12,6 +12,32 @@ from typing import Any, Optional
 
 from apiforge.models import Endpoint
 
+
+def _load_spec_dict(path_or_url: str):
+    """Load an OpenAPI/Swagger spec from a file path or http(s) URL,
+    parsing JSON or YAML transparently."""
+    import json as _json
+    text = None
+    if path_or_url.startswith(("http://", "https://")):
+        import httpx
+        text = httpx.get(path_or_url, timeout=15.0, verify=False).text
+    else:
+        with open(path_or_url, encoding="utf-8") as f:
+            text = f.read()
+    # try JSON first, then YAML
+    try:
+        return _json.loads(text)
+    except Exception:
+        try:
+            import yaml  # pyyaml
+        except ImportError as exc:
+            raise RuntimeError(
+                "Spec is not JSON and PyYAML is not installed. "
+                "Run: pip install pyyaml"
+            ) from exc
+        return yaml.safe_load(text)
+
+
 _METHODS = ("get", "post", "put", "patch", "delete")
 
 
@@ -22,8 +48,7 @@ class OpenAPIParser:
         extra_vars: Optional[dict[str, str]] = None,
     ) -> None:
         self.spec_path = Path(spec_path)
-        with open(self.spec_path, encoding="utf-8") as f:
-            self.spec: dict[str, Any] = json.load(f)
+        self.spec: dict[str, Any] = _load_spec_dict(str(spec_path))
         self.extra_vars = extra_vars or {}
         self.endpoints: list[Endpoint] = []
 
