@@ -1,22 +1,36 @@
 # APIForge
 
-**Automated OWASP API Top 10 vulnerability detection from Postman collections and OpenAPI/Swagger specs.**
+**Specification-driven API security testing with multi-user authorization checks and evidence-based reporting.**
 
-APIForge takes an API description (a Postman collection *or* an OpenAPI/Swagger file) plus test-user credentials, authenticates the users, runs a suite of OWASP API Top 10 security checks across every endpoint, and produces pentest-ready reports — turning hours of manual API testing into a single command.
+APIForge is a college team project that tests running REST APIs described by Postman collections or OpenAPI/Swagger specifications. It combines authorization checks with selected authentication, SSRF, and configuration checks, and exports findings for manual verification.
 
-Fully local. No cloud. No telemetry. Open source (Apache 2.0).
+## Team and repository provenance
+
+This repository is maintained by **Aswin T. J. (Aswinjagadeesh1)** as a copy of the team's [original APIForge repository](https://github.com/NishanthGE/apiforge), shared with permission. The original Git history and Apache 2.0 licence are retained.
+
+The accompanying manuscript credits **Aswin T. J., Nishanth G. E., Sahana S., and Akash K. S.**, Department of Computer Science and Engineering (Cyber Security), Sri Krishna College of Engineering and Technology, Coimbatore. APIForge is collaborative work; hosting this copy does not imply sole authorship of its implementation.
+
+## Relationship to the paper
+
+The accompanying manuscript, *A Specification-Driven Automated API Security Testing Framework*, is not yet published. It documents an earlier version focused on BOLA and selected checks within OWASP API1-API5.
+
+Development continued after the manuscript was prepared. The current implementation registers **12 checks across seven OWASP API Security Top 10 (2023) categories: API1-API5, API7, and API8**. It also includes direct-token authentication and optional blind-SSRF checks. Current repository capabilities should be distinguished from the scope and validation reported in the manuscript.
+
+## Intended use
+
+Use only against systems you own or are explicitly authorised to test. Checks can modify application state and issue bursts of requests; begin with the bundled lab and disposable test accounts. Reports may contain credentials or response data and should be reviewed before sharing.
 
 ## Highlights
 
 - **Two input formats** — Postman Collection v2.1 *and* OpenAPI/Swagger (2.0 & 3.x), auto-detected.
-- **Multi-user, stateful testing** — authenticates two regular users (and optionally an admin) to detect real authorization flaws (BOLA, BFLA, privilege escalation) that traffic-driven scanners miss.
-- **12 checks across 6 OWASP API categories** (API1–API5, API7, API8).
-- **Evidence-based findings** — every finding carries the real request and response that proved it, rendered as an annotated proof-of-concept image embedded in the report. Findings are reproducible by hand, not vague alerts.
+- **Multi-user, stateful testing** — authenticates two regular users (and optionally an admin) to investigate authorization flaws such as BOLA, BFLA, and privilege escalation.
+- **12 checks across 7 OWASP API categories** (API1–API5, API7, API8).
+- **Evidence-based findings** — findings include request/response evidence for manual verification, rendered as an annotated proof-of-concept image embedded in the report. Findings are reproducible by hand, not vague alerts.
 - **Root-cause grouping** — the same flaw across many endpoints is reported as one finding listing all affected endpoints, not N duplicates, so counts stay honest.
 - **In-band *and* blind SSRF detection** — blind SSRF is confirmed via a local out-of-band listener (no cloud collaborator), for targets that can reach the scanning host (localhost / Docker / same network / lab).
 - **Configurable, not hardcoded** — login field, password field, auth header/scheme, BOLA identifier/owner fields, and optional admin role are all set via config, so new APIs need config changes, not code changes.
 - **Pentest-shaped output** — Word, Excel, and JSON. Each finding has severity, CVSS, CWE, OWASP category, affected endpoints, description, annotated PoC, impact, and remediation.
-- **Low false positives by design** — every check verifies a baseline (and, where relevant, response content) before reporting.
+- **Baseline comparison** — checks use baseline and response comparisons where applicable; this does not establish a measured false-positive rate.
 
 ## Checks implemented
 
@@ -39,13 +53,26 @@ The check engine is plugin-based (apiforge/checks/base.py) — a new check is on
 
 ## Install
 
+Requires **Python 3.11+**. For a private repository, GitHub access is required to clone it.
+
+Linux/macOS:
+
 ```bash
-git clone https://github.com/NishanthGE/apiforge.git
+git clone https://github.com/Aswinjagadeesh1/apiforge.git
 cd apiforge
 python3 -m venv venv
 source venv/bin/activate
 pip install -e .
 ```
+
+Windows PowerShell (after cloning and entering the repository):
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -e .
+```
+
+On Windows, use `.\.venv\Scripts\apiforge.exe` in place of `apiforge` in the commands below. For YAML OpenAPI files, also install `PyYAML` in the same environment (`python -m pip install pyyaml`); it is not currently declared in the package dependencies. The examples use local specification files.
 
 ## Quick start
 
@@ -68,7 +95,18 @@ apiforge -c api.postman.json -u users.json -b http://localhost:8888 \
   -o report.xlsx --json report.json --word report.docx
 ```
 
-APIForge auto-detects whether -c is a Postman collection or an OpenAPI/Swagger spec.
+APIForge auto-detects whether `-c` is a Postman collection or an OpenAPI/Swagger spec.
+
+Existing test-user tokens can be supplied instead of login credentials:
+
+```json
+{
+  "user_a": { "token": "REPLACE_WITH_USER_A_TEST_TOKEN" },
+  "user_b": { "token": "REPLACE_WITH_USER_B_TEST_TOKEN" }
+}
+```
+
+`login_endpoint` is unnecessary when all users supply tokens. Tokens must remain valid during the scan. These placeholders are not working credentials.
 
 To enable blind SSRF detection (starts a local out-of-band listener; use only on a trusted/lab network, since the listener binds all interfaces so the target can call back):
 
@@ -91,7 +129,7 @@ All per-API behavior lives in the users config, so different APIs are handled by
 
 | Field | Purpose | Default |
 |---|---|---|
-| login_endpoint | Path appended to base URL for login | (required) |
+| login_endpoint | Path appended to base URL for login | Required for credential login; omitted in token-only mode |
 | token_json_path | Dotted path to the token in the login response | auto-detected |
 | login_field | Identity field name (email, username, user, ...) | email |
 | password_field | Password field name (password, pass, ...) | password |
@@ -106,12 +144,12 @@ All per-API behavior lives in the users config, so different APIs are handled by
 
 APIForge distinguishes **shipped** (runs and produces output) from **validated** (findings manually reproduced by hand). The distinction is deliberate.
 
-- **crAPI (OWASP)** — every reported finding manually verified as a true positive, **zero false positives**. Includes a confirmed **blind SSRF** true positive on the `mechanic_api` flow, detected via out-of-band callback. Evidence committed under `validation/`.
+- **crAPI (OWASP)** — the upstream project reports manual verification of its recorded findings, with no false positives in those runs. Includes a confirmed **blind SSRF** true positive on the `mechanic_api` flow, detected via out-of-band callback. Evidence committed under `validation/`.
 - **SSRF check** — validated end-to-end on a bundled deliberately-vulnerable test app (`samples/ssrf_test_server.py`): in-band flagged, blind flagged via OOB, safe endpoint not flagged.
 
 Note: crAPI is deliberately vulnerable, so a clean pass there proves the *process* works, not precision on healthy APIs. A measured false-positive rate across diverse, mostly-secure APIs is the current validation focus.
 
-A bundled mock server gives a zero-setup demo:
+After installing dependencies, run the bundled mock server in one terminal and scan it from a second terminal:
 
 ```bash
 python -m samples.vuln_server
@@ -120,9 +158,9 @@ apiforge -c samples/vulnshop.postman.json -u samples/users.json -b http://localh
 
 ## Methodology
 
-Every check follows a **baseline → attack → compare** pattern: establish legitimate behaviour, send the malicious/unauthorized request, and only report when the API behaves incorrectly relative to the baseline. This evidence-based approach is what keeps false positives low. APIForge performs dynamic (DAST) testing against a running API and focuses on the authentication and authorization flaws that cause most real-world API breaches.
+The central testing workflow follows a **baseline → attack → compare** pattern: establish legitimate behaviour, send the malicious/unauthorized request, and only report when the API behaves incorrectly relative to the baseline. These comparisons provide evidence for review; findings still require manual verification. APIForge performs dynamic (DAST) testing against a running API and focuses on the authentication and authorization flaws that cause most real-world API breaches.
 
-**Scope, stated honestly:** APIForge automates the **authorization layer** of API testing (who can access what) plus common technical flaws (JWT, SSRF, misconfiguration). Application-specific *business-logic* flaws (price manipulation, workflow bypass, race conditions) still require a human tester — no automated tool reliably finds these — and APIForge is designed to free testers to focus there. Payload-level encrypted APIs need the encryption scheme supplied to be testable.
+**Scope, stated honestly:** APIForge automates the **authorization layer** of API testing (who can access what) plus common technical flaws (JWT, SSRF, misconfiguration). Application-specific *business-logic* flaws (price manipulation, workflow bypass, race conditions) still require a human tester — these are outside this implementation’s general-purpose coverage — and APIForge is designed to free testers to focus there. Payload-level encrypted APIs need the encryption scheme supplied to be testable.
 
 ## Architecture
 
@@ -168,4 +206,4 @@ pytest tests/ -q
 
 ## License
 
-Apache License 2.0 — see LICENSE.
+Apache License 2.0 — see [LICENSE](LICENSE). Original licence and attribution notices are retained.
