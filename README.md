@@ -8,7 +8,7 @@ APIForge is a college team project that tests running REST APIs described by Pos
 
 This repository is maintained by **Aswin T. J. (Aswinjagadeesh1)** as a copy of the team's [original APIForge repository](https://github.com/NishanthGE/apiforge), shared with permission. The original Git history and Apache 2.0 licence are retained.
 
-The accompanying manuscript credits **Aswin T. J., Nishanth G. E., Sahana S., and Akash K. S.**, Department of Computer Science and Engineering (Cyber Security), Sri Krishna College of Engineering and Technology, Coimbatore. APIForge is collaborative work; hosting this copy does not imply sole authorship of its implementation.
+The accompanying manuscript credits **Aswin T. J., Nishanth G. E., Sahana S., and Akash K. S.**, Department of Computer Science and Engineering (Cyber Security), Sri Krishna College of Engineering and Technology, Coimbatore. The project combines team development and research; individual implementation history is retained in Git.
 
 ## Relationship to the paper
 
@@ -49,7 +49,7 @@ Use only against systems you own or are explicitly authorised to test. Checks ca
 | Security Misconfiguration (verbose errors) | API8:2023 | CWE-209 | MEDIUM | Triggers errors and flags leaked stack traces, DB errors, and source paths |
 | CORS Misconfiguration | API8:2023 | CWE-942 | MEDIUM | Forges an Origin header; flags reflected origin with credentials |
 
-The check engine is plugin-based (apiforge/checks/base.py) — a new check is one class plus a line in apiforge/checks/__init__.py.
+The check engine is plugin-based (`apiforge/checks/base.py`) — a new check is one class plus a line in `apiforge/checks/__init__.py`.
 
 ## Install
 
